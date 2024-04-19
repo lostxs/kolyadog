@@ -1,0 +1,204 @@
+version: "3.8"
+services:
+  user-registration-service:
+    container_name: user-registration-service
+    image: user-registration-service
+    build:
+      context: ./user_registration_service
+      dockerfile: Dockerfile
+    user: "1001"
+    depends_on:
+      - register_service_db
+      - rabbitmq
+    env_file:
+      - ./user_registration_service/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./certs:/app/certs:ro
+    networks:
+      - custom
+
+  authentication-service:
+    container_name: authentication-service
+    image: authentication-service
+    build:
+      context: ./authentication_service
+      dockerfile: Dockerfile
+    depends_on:
+      - auth_service_db
+      - auth_redis
+      - rabbitmq
+    user: "1001"
+    env_file:
+      - ./authentication_service/.env
+    ports:
+      - "8100:8000"
+    volumes:
+      - ./certs:/app/certs:ro
+    networks:
+      - custom
+
+  user-service:
+    container_name: user-service
+    image: user-service
+    build:
+      context: ./user_service
+      dockerfile: Dockerfile
+    depends_on:
+      - user_service_db
+      - auth_redis
+      - rabbitmq
+    user: "1001"
+    env_file:
+      - ./user_service/.env
+    ports:
+      - "8300:8000"
+    volumes:
+      - ./certs:/app/certs:ro
+    networks:
+      - custom
+
+  message-service:
+    container_name: message-service
+    image: message-service
+    build:
+      context: ./message_service
+      dockerfile: Dockerfile
+    depends_on:
+      - message_service_db
+      - message_redis
+      - rabbitmq
+    user: "1001"
+    env_file:
+      - ./message_service/.env
+    ports:
+      - "8200:8000"
+    volumes:
+      - ./message_service:/app
+      - ./certs:/app/certs:ro
+    networks:
+      - custom
+
+  register_service_db:
+    container_name: register_service_db
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=register_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - register-db-data:/var/lib/postgresql/data
+    networks:
+      - custom
+
+  user_service_db:
+    container_name: user_service_db
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=user_db
+    ports:
+      - "5436:5432"
+    networks:
+      - custom
+
+  auth_service_db:
+    container_name: auth_service_db
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=auth_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    networks:
+      - custom
+
+  message_service_db:
+    container_name: message_service_db
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=message_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - message-db-data:/var_lib/postgresql/data
+    networks:
+      - custom
+
+  message_redis:
+    container_name: message_redis
+    image: redis:6.0-alpine
+    ports:
+      - "6380:6379"
+    networks:
+      - custom
+    volumes:
+      - message-redis-data:/data
+
+  auth_redis:
+    container_name: auth_redis
+    image: redis:6.0-alpine
+    ports:
+      - "6381:6379"
+    networks:
+      - custom
+    volumes:
+      - auth-redis-data:/data
+
+  rabbitmq:
+    container_name: rabbitmq
+    build: ./rabbitmq
+    ports:
+      - "5671:5671"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - custom
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  nginx:
+    container_name: nginx
+    image: nginx:1.19.3
+    volumes:
+      - ./certs:/etc/nginx/ssl:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - "443:443"
+    depends_on:
+      - user-registration-service
+      - authentication-service
+      - message-service
+    networks:
+      - custom
+
+networks:
+  custom:
+    driver: bridge
+
+volumes:
+  register-db-data:
+  auth-db-data:
+  message-db-data:
+  auth-redis-data:
+  message-redis-data:
+  rabbitmq-data:
+
