@@ -1,8 +1,7 @@
 from typing import Optional
-
+import settings
 from redis.asyncio import Redis
 
-import settings
 
 redis_pool: Optional[Redis] = None
 

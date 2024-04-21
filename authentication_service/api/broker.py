@@ -2,7 +2,7 @@ import json
 import logging
 
 from aio_pika import IncomingMessage, ExchangeType
-from sqlalchemy import select
+from sqlalchemy.future import select
 
 from db.models import AuthUser
 from rabbitmq import get_rabbit_connection

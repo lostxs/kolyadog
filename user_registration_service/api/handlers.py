@@ -1,7 +1,6 @@
 from typing import Union
-
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +8,6 @@ from api.actions.user import _create_new_user, _activate_user_account
 from api.schemas import UserCreate, ShowUser, ActivationCodeData
 from db.session import get_db
 
-from db.models import User
 
 user_router = APIRouter()
 

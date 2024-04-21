@@ -5,7 +5,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.broker import publish_user_activated_event, publish_user_created_event
+# from api.broker import publish_user_activated_event, publish_user_created_event
 from api.schemas import UserCreate, ShowUser
 from db.dals import UserDAL
 from db.models import ActivationCode, User
@@ -34,14 +34,14 @@ async def _create_new_user(body: UserCreate, session) -> ShowUser:
             session.add(activation_record)
             await session.commit()
             await send_activation_code(user.email, activation_code)
-            user_data = {
-                "user_id": str(user.user_id),
-                "username": user.username,
-                "email": user.email,
-                "is_active": user.is_active,
-                "hashed_password": user.hashed_password
-            }
-            await publish_user_created_event(user_data)
+            # user_data = {
+            #     "user_id": str(user.user_id),
+            #     "username": user.username,
+            #     "email": user.email,
+            #     "is_active": user.is_active,
+            #     "hashed_password": user.hashed_password
+            # }
+            # await publish_user_created_event(user_data)
             return ShowUser(
                 user_id=user.user_id,
                 username=user.username,
@@ -75,10 +75,10 @@ async def _activate_user_account(user_id: UUID, code: str, db: AsyncSession):
             user.is_active = True
             await db.delete(activation_record)
             await db.commit()
-            await publish_user_activated_event({
-                "user_id": str(user.user_id),
-                "is_active": user.is_active
-            })
+            # await publish_user_activated_event({
+            #     "user_id": str(user.user_id),
+            #     "is_active": user.is_active
+            # })
     except Exception:
         await db.rollback()
         raise

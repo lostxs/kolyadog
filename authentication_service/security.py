@@ -1,10 +1,9 @@
 import json
+import settings
 from datetime import timedelta, datetime
 from typing import Optional
 from uuid import UUID
-
 from jose import jwt
-import settings
 from db.redis import get_redis_auth_pool
 
 

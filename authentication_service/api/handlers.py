@@ -1,15 +1,15 @@
+import logging
 from datetime import timedelta
+import settings
+from security import create_access_token
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response, WebSocket
+from fastapi import APIRouter, Depends, HTTPException, status, Response, WebSocket, WebSocketDisconnect, Query
 from fastapi.security import OAuth2PasswordRequestForm
 
 from sqlalchemy.ext.asyncio import AsyncSession
-
-import settings
-from api.actions.auth import authenticate_user, _get_user_by_email_for_auth
+from api.actions.auth import authenticate_user, _get_user_by_email_for_auth, check_token_expiration, verify_token
 from db.session import get_db
 
-from security import create_access_token
 
 auth_router = APIRouter()
 
@@ -50,8 +50,22 @@ async def login_for_access_token(
 
 
 @auth_router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
     await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        await websocket.send_text(f"Message text was: {data}")
+    user_id, token_valid = await verify_token(token)
+    if not token_valid:
+        await websocket.close(code=4001)
+        return
+
+    logging.info(f"User {user_id} connected via websocket.")
+    try:
+        while True:
+            message = await websocket.receive_text()
+            session_active = await check_token_expiration(user_id)
+            if not session_active:
+                await websocket.send_json({"error": "Session expired"})
+                await websocket.close(code=1000)
+                break
+            await websocket.send_json({"message": "Session is active, message received: " + message})
+    except WebSocketDisconnect:
+        logging.info(f"User {user_id} disconnected")
