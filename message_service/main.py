@@ -1,21 +1,19 @@
 import asyncio
 import logging
 import os
+import uvicorn
 from typing import Optional
 
-import uvicorn
-from fastapi import FastAPI, APIRouter, Depends, WebSocketDisconnect, status
+from fastapi import FastAPI, APIRouter, Depends, WebSocketDisconnect, status, WebSocket
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from starlette.websockets import WebSocket
 
 from api.actions.auth import authenticate_user_via_redis, get_user_details_by_id, query_or_cookie_extractor
 from api.broker import setup_consumer, handle_user_created, handle_user_activated
 from db.session import get_db
-
-from rabbitmq import get_rabbit_connection
 from db.redis import get_redis_messages_pool, get_redis_auth_pool
+from rabbitmq import get_rabbit_connection
+
 from websocket.actions import manager, handle_messages, handle_websocket_disconnect
 
 app = FastAPI()
@@ -79,18 +77,8 @@ async def websocket_endpoint(
 
 
 if __name__ == "__main__":
-    key_path = "/app/certs/server.key"
-    cert_path = "/app/certs/server.crt"
-    logging.info(f"Using SSL key: {key_path}")
-    logging.info(f"Using SSL certificate: {cert_path}")
-
-    if not os.path.exists(key_path) or not os.path.exists(cert_path):
-        logging.error("SSL certificate or key file does not exist.")
-    else:
-        uvicorn.run(
-            app,
-            host="0.0.0.0",
-            port=int(os.getenv("APP_PORT", "8000")),
-            ssl_keyfile=key_path,
-            ssl_certfile=cert_path
-        )
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=int(os.getenv("APP_PORT", "8000"))
+    )

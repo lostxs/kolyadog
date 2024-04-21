@@ -2,11 +2,11 @@ import json
 import logging
 
 from aio_pika import IncomingMessage, ExchangeType
-from sqlalchemy import select
+from sqlalchemy.future import select
 
-from db.models import User
 from rabbitmq import get_rabbit_connection
 from db.session import async_session
+from db.models import User
 
 
 logging.basicConfig(level=logging.INFO)

@@ -1,13 +1,9 @@
 import asyncio
-import logging
 import os
-from uuid import UUID
-
 import uvicorn
-from fastapi import FastAPI, APIRouter, WebSocketDisconnect, WebSocket
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.actions.auth import check_token_expiration
 from api.broker import setup_consumer, handle_user_created, handle_user_activated
 from api.handlers import auth_router
 from rabbitmq import get_rabbit_connection
@@ -58,22 +54,6 @@ async def shutdown_event():
     rabit_pool = await get_rabbit_connection()
     await redis_pool.close()
     await rabit_pool.close()
-
-
-@app.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: UUID):
-    await websocket.accept()
-    try:
-        while True:
-            await websocket.receive_text()
-            session_active = await check_token_expiration(user_id)
-            if not session_active:
-                await websocket.send_json({"error": "Session expired"})
-                break
-
-            await websocket.send_json({"message": "Session is active"})
-    except WebSocketDisconnect:
-        logging.info("Client disconnected")
 
 
 if __name__ == "__main__":
